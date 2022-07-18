@@ -2,9 +2,11 @@
 #include <tuple>
 #include <iterator>
 
-#define CONTAINER_PRINTER_STREAM_INSERTION cp_stream_insertion
+#define CONTAINER_PRINTER_STREAM_INSERTION stream_insertion_function
 
 namespace container_printer {
+
+namespace detail {
 
 template<typename Stream, typename T, typename Enable = void>
 struct has_stream_insertion : std::false_type {};
@@ -35,8 +37,6 @@ struct is_tuple<T, std::void_t<decltype(get<0>(std::declval<T>())), std::tuple_s
 template<typename Stream, typename T>
 Stream &CONTAINER_PRINTER_STREAM_INSERTION(Stream &, const T &);
 
-namespace detail {
-
 template<typename Stream, typename TupleT, std::size_t N = std::tuple_size_v<TupleT>, std::size_t I = 0>
 struct tuple_printer_impl {
     static constexpr void apply(Stream &s, const TupleT &t) {
@@ -62,8 +62,6 @@ struct tuple_printer_impl<Stream, TupleT, N, N> {
     }
 };
 
-}
-
 template<typename Stream, typename T>
 Stream &CONTAINER_PRINTER_STREAM_INSERTION(Stream &stream, const T &value) {
     if constexpr (has_stream_insertion<Stream, T>::value) {
@@ -88,6 +86,25 @@ Stream &CONTAINER_PRINTER_STREAM_INSERTION(Stream &stream, const T &value) {
     }
     // TODO: constructable to string
     // TODO: has .to_string()
+}
+
+}
+
+namespace stream_insertion_operator {
+
+using detail::CONTAINER_PRINTER_STREAM_INSERTION;
+
+template<typename Stream, typename T>
+constexpr
+std::enable_if_t<
+    !detail::has_stream_insertion<Stream, T>::value,
+    Stream &
+>
+operator<<(Stream &s, const T &v) {
+    using namespace detail;
+    return CONTAINER_PRINTER_STREAM_INSERTION(s, v);
+}
+
 }
 
 }
